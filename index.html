@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Type play</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 发泡材质 - 效果生成器</title>
+    <style>
+        :root {
+            --bg: #d4d5d0; 
+            --panel: #000000; /* 面板底色改为纯黑 */
+            --text: #ffffff;  /* 全局字体颜色改为白色以适配黑底 */
+            --border: #333333; /* 边框调暗 */
+            --accent: #ffffff; /* 强调色(按钮/滑块)改为白色 */
+        }
+
+/* 全局盒模型与排版 */
+html { box-sizing: border-box; }
+*, *:before, *:after { box-sizing: inherit; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0; 
+    display: flex;
+    align-items: stretch;     
+    height: 100vh; 
+    overflow: hidden; 
+}
+
+/* 左侧面板布局 */
+.controls {
+    background: var(--panel);
+    padding: 25px;
+    width: 100%;
+    max-width: 330px; 
+    flex-shrink: 0; 
+    border: none; 
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column; 
+}
+
+/* 右侧画布布局 */
+.canvas-area {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: hidden; 
+    min-height: 0;
+    min-width: 0;
+}
+
+canvas {
+    background: #ffffff;
+    border: none; 
+    display: block;
+    cursor: default; 
+    flex-shrink: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -ms-touch-action: none;
+    touch-action: none;   /* 拖动图形时不触发页面滚动 */
+}
+
+.control-group { margin-bottom: 14px; width: 100%; }
+.color-row { display: flex; width: 100%; }
+.color-row > .color-col + .color-col { margin-left: 10px; }
+.color-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.color-col > span { margin-bottom: 4px; }
+
+.control-group label, .control-group .group-title {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem; 
+    font-weight: 600;
+    margin-bottom: 6px; 
+    color: #ffffff; /* 标题文字改为白色 */
+}
+
+/* 统一的滑块样式 */
+input[type="range"] { 
+    -webkit-appearance: none; 
+    appearance: none;
+    width: 100%; 
+    cursor: pointer; 
+    background: transparent; 
+    margin: 4px 0; 
+    outline: none;
+    --range-progress: 50%; 
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px; 
+    background: linear-gradient(to right, var(--accent) var(--range-progress, 0%), var(--border) var(--range-progress, 0%));
+    border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px; 
+    width: 14px;  
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    margin-top: -5px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+}
+input[type="range"]::-moz-range-progress {
+    background: var(--accent);
+    height: 4px;
+    border-radius: 2px;
+}
+input[type="range"]::-moz-range-thumb {
+    height: 14px; 
+    width: 14px;  
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* 自定义取色器 */
+.color-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 0; 
+    overflow: hidden;
+    background: #000000; /* 取色框底色同面板 */
+    height: 20px; 
+    width: 100%;
+}
+.color-input-wrapper input[type="color"] { 
+    -webkit-appearance: none; 
+    width: 24px; 
+    height: 100%; 
+    cursor: pointer; 
+    border: none; 
+    padding: 0; 
+    background: none; 
+}
+.color-input-wrapper input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input-wrapper input[type="color"]::-webkit-color-swatch { 
+    border: none; 
+    border-right: 1px solid var(--border); 
+    border-radius: 0; 
+}
+.color-input-wrapper input[type="text"] {
+    flex: 1;
+    width: 100%; 
+    height: 100%; 
+    margin: 0;
+    border: none;
+    outline: none;
+    padding: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.75rem; 
+    font-weight: 500; 
+    letter-spacing: 0.5px; 
+    color: var(--accent); 
+    background: transparent;
+    text-align: center; 
+    line-height: 18px; 
+    min-width: 0;
+}
+
+/* 上传、导出等按钮变为白底黑字 */
+button, .upload-btn {
+    display: block; width: 100%; background: var(--accent); color: #000000;
+    border: none; padding: 12px; font-weight: 600; font-size: 0.9rem; 
+    cursor: pointer; text-align: center; margin-top: 10px; margin-bottom: 16px; transition: 0.2s;
+}
+
+button:not(#btnRandomColor):hover, .upload-btn:hover { 
+    background: #e4e4e7 !important; 
+    color: #000000 !important; 
+}
+button:disabled {
+    opacity: 1; cursor: wait;
+}
+
+input[type="file"] { display: none; }
+.val { color: var(--accent); font-family: -apple-system, BlinkMacSystemFont, monospace; font-size: 0.9rem; font-weight: 600;}
+
+/* 预览图框 */
+.preview-box {
+    width: 100%;
+    height: 120px; 
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #27272a; /* 背景色改为与随机色彩按钮一致 */
+    border: none; /* 去除边框 */
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.preview-box img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    -o-object-fit: cover;
+    object-fit: cover;   /* 图片铺满整个预览框 */
+}
+
+#clearImg {
+    position: absolute;
+    right: 16px; 
+    cursor: pointer;
+    color: #9ca3af; 
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300; 
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: color 0.1s;
+    padding: 4px;
+}
+#clearImg:hover { 
+    color: #ffffff; 
+}
+
+.export-wrapper {
+    margin-top: auto; 
+    padding-top: 10px;
+}
+.export-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+.download-group {
+    display: grid; 
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 8px;
+    gap: 8px; 
+}
+.download-group button { margin-top: 0; font-weight: 400; margin-bottom: 0;}
+</style>
+</head>
+<body>
+<!-- UI控制面板 -->
+<div class="controls">
+    <!-- 图像预览框 -->
+    <div class="preview-box" id="previewBox">
+        <span id="previewText" style="color: #a1a1aa; font-size: 0.9rem; font-weight: 600;">Image Preview</span>
+        <img id="previewImg" alt="Image Preview" style="display: none;">
+    </div>
+
+    <!-- 上传按钮框 -->
+    <label class="upload-btn" style="position: relative; display: flex; justify-content: center; align-items: center;">
+        <span id="uploadText">上传图片 Upload</span>
+        <span id="fileName" style="display: none;"></span>
+        <span id="clearImg" style="display: none;" title="取消当前图片">X</span>
+        <input type="file" id="imageUpload" accept="image/*">
+    </label>
+
+    <!-- 自定义色彩控制 -->
+    <div class="control-group">
+        <div class="group-title">
+            <span>颜色设置 (Colors)</span>
+        </div>
+        <div class="color-row">
+            <div class="color-col">
+                <span style="font-size: 0.75rem; color: #a1a1aa;">图形</span>
+                <div class="color-input-wrapper">
+                    <input type="color" id="colorCore" value="#000000">
+                    <input type="text" id="colorCoreText" value="#000000" maxlength="7">
+                </div>
+            </div>
+            <div class="color-col">
+                <span style="font-size: 0.75rem; color: #a1a1aa;">背景</span>
+                <div class="color-input-wrapper">
+                    <input type="color" id="colorBg" value="#ffffff">
+                    <input type="text" id="colorBgText" value="#FFFFFF" maxlength="7">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发泡材质效果滑块组 -->
+    <div class="control-group">
+        <label><span>图形阀值 (Threshold)</span> <span class="val" id="v_graphicThresh">220</span></label>
+        <input type="range" id="graphicThresh" min="0" max="255" value="220">
+    </div>
+
+    <div class="control-group">
+        <label><span>边缘平滑度 (Edge Smooth)</span> <span class="val" id="v_edgeSmooth">35</span></label>
+        <input type="range" id="edgeSmooth" min="0" max="100" value="35">
+    </div>
+
+    <div class="control-group">
+        <label><span>图形融合 (Inflate)</span> <span class="val" id="v_smoothCurve">1</span></label>
+        <input type="range" id="smoothCurve" min="1" max="150" value="1">
+    </div>
+
+    <div class="control-group">
+        <label><span>立体管膨胀感 (Volume)</span> <span class="val" id="v_volume">130</span></label>
+        <input type="range" id="volume" min="20" max="250" value="130">
+    </div>
+
+    <div class="control-group">
+        <label><span>表面微孔隙度 (Pores)</span> <span class="val" id="v_texture">120</span></label>
+        <input type="range" id="texture" min="50" max="250" value="120">
+    </div>
+
+    <div class="control-group">
+        <label><span>光影对比度 (Contrast)</span> <span class="val" id="v_butter">60</span></label>
+        <input type="range" id="butter" min="0" max="100" value="60">
+    </div>
+
+    <div class="control-group">
+        <label><span>光影角度 (Light Angle)</span> <span class="val" id="v_lightAngle">324°</span></label>
+        <input type="range" id="lightAngle" min="0" max="360" value="324">
+    </div>
+
+    <!-- 下载与色彩随机组 -->
+    <div class="export-wrapper">
+        <div class="export-title">Export 导出</div>
+        <div class="download-group">
+            <button id="btnJpg">JPG</button>
+            <button id="btnPng">PNG</button> 
+            <button id="btnRandomColor" title="开启随机色彩模式" style="grid-column: 1 / -1; background: #27272a; color: #ffffff; font-size: 0.9rem; font-weight: 500; padding: 10px 0;">随机色彩 Random Color</button>
+        </div>
+    </div>
+</div>
+
+<div class="canvas-area" id="canvasArea">
+    <canvas id="mainCanvas" width="1200" height="1600"></canvas>
+</div>
+
+<script>
+    // ---------- 兼容性：旧版 Safari / Chrome 缺失的 API 做补齐 ----------
+    (function () {
+        var types = [Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array, Float64Array];
+        types.forEach(function (T) {
+            if (!T.prototype.fill) {
+                T.prototype.fill = function (value, start, end) {
+                    var len = this.length;
+                    var s = start === undefined ? 0 : (start < 0 ? Math.max(len + start, 0) : Math.min(start, len));
+                    var e = end === undefined ? len : (end < 0 ? Math.max(len + end, 0) : Math.min(end, len));
+                    for (; s < e; s++) this[s] = value;
+                    return this;
+                };
+            }
+        });
+    })();
+
+    const DOM = {
+        canvasArea: document.getElementById('canvasArea'),
+        graphicThresh: document.getElementById('graphicThresh'),
+        edgeSmooth: document.getElementById('edgeSmooth'),
+        smoothCurve: document.getElementById('smoothCurve'),
+        volume: document.getElementById('volume'),
+        texture: document.getElementById('texture'),
+        butter: document.getElementById('butter'),
+        lightAngle: document.getElementById('lightAngle'),
+        colorBg: document.getElementById('colorBg'),
+        colorCore: document.getElementById('colorCore'),
+        colorCoreText: document.getElementById('colorCoreText'),
+        colorBgText: document.getElementById('colorBgText'),
+        
+        previewBox: document.getElementById('previewBox'),
+        previewText: document.getElementById('previewText'),
+        previewImg: document.getElementById('previewImg'),
+        uploadText: document.getElementById('uploadText'),
+        fileName: document.getElementById('fileName'),
+        clearImg: document.getElementById('clearImg'),
+        canvas: document.getElementById('mainCanvas'),
+        imageUpload: document.getElementById('imageUpload'),
+        btnJpg: document.getElementById('btnJpg'),
+        btnPng: document.getElementById('btnPng'),
+        btnRandomColor: document.getElementById('btnRandomColor')
+    };
+
+    const canvas = DOM.canvas;
+    const ctx = canvas.getContext('2d');
+    let originalImage = new Image();
+    let imageVersion = 0;      // 图片变化时递增，用于让缓存失效
+    let cacheMain = {};        // 渲染缓存（各阶段结果，滑块只重算受影响的部分）
+    let rafPending = false;
+    let currentObjectURL = null;   // 当前图片的对象地址（更换/清除时释放）
+    let moveX = 0, moveY = 0;      // 图形在画布中的位移（以画布宽度为单位的比例）
+
+    const EXPORT_W = 2400, EXPORT_H = 3200;   // 导出尺寸基准
+    const MAX_CANVAS_W = 1500;                // 画布内部分辨率上限
+
+    // =============================
+    // UI 控制部分逻辑
+    // =============================
+
+    function scheduleRender() {
+        if (!originalImage.src || rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => { rafPending = false; renderEffect(); });
+    }
+
+    function updateRangeProgress(el) {
+        const min = parseFloat(el.min) || 0;
+        const max = parseFloat(el.max) || 100;
+        const val = parseFloat(el.value);
+        const percent = ((val - min) / (max - min)) * 100;
+        el.style.setProperty('--range-progress', percent + '%');
+    }
+
+    // 绑定并同步所有的滑块属性
+    ['graphicThresh', 'edgeSmooth', 'smoothCurve', 'volume', 'texture', 'butter', 'lightAngle'].forEach(id => {
+        const el = DOM[id];
+        updateRangeProgress(el);
+        
+        el.addEventListener('input', (e) => {
+            updateRangeProgress(e.target);
+            document.getElementById('v_' + id).innerText = e.target.value + (id === 'lightAngle' ? '°' : '');
+            if(originalImage.src) scheduleRender();
+        });
+    });
+
+    function applyColorChange(colorEl) {
+        if (colorEl.id === 'colorBg') composeCanvas();
+        else if (originalImage.src) scheduleRender();
+    }
+
+    function handleColorInput(colorEl, textEl) {
+        textEl.value = colorEl.value.toUpperCase();
+        applyColorChange(colorEl);
+    }
+    
+    function handleTextInput(textEl, colorEl) {
+        let val = textEl.value.replace(/^\s+|\s+$/g, '');
+        if (val.charAt(0) !== '#') val = '#' + val;
+        if (/^#[0-9A-F]{6}$/i.test(val)) {
+            colorEl.value = val;
+            applyColorChange(colorEl);
+        }
+    }
+
+    DOM.colorCore.addEventListener('input', () => handleColorInput(DOM.colorCore, DOM.colorCoreText));
+    DOM.colorCoreText.addEventListener('input', () => handleTextInput(DOM.colorCoreText, DOM.colorCore));
+    DOM.colorBgText.addEventListener('input', () => handleTextInput(DOM.colorBgText, DOM.colorBg));
+    DOM.colorBg.addEventListener('input', () => handleColorInput(DOM.colorBg, DOM.colorBgText));
+
+    DOM.imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        let nameStr = file.name;
+        const dotIdx = nameStr.lastIndexOf('.');
+        if (dotIdx !== -1) nameStr = nameStr.substring(0, dotIdx);
+        if (nameStr.length > 8) nameStr = nameStr.substring(0, 8) + '...';
+
+        const URLObj = window.URL || window.webkitURL;
+        const url = URLObj.createObjectURL(file);
+
+        originalImage.onload = () => {
+            if (currentObjectURL && currentObjectURL !== url) URLObj.revokeObjectURL(currentObjectURL);
+            currentObjectURL = url;
+
+            imageVersion++;
+            moveX = 0; moveY = 0;
+
+            DOM.previewBox.style.background = getSubjectColor(originalImage);
+            DOM.previewBox.style.display = 'flex';
+            DOM.previewText.style.display = 'none'; 
+            DOM.previewImg.style.display = 'block';
+            DOM.previewImg.src = url;
+            
+            DOM.uploadText.style.display = 'none';
+            DOM.fileName.innerText = nameStr;
+            DOM.fileName.style.display = 'inline';
+            DOM.clearImg.style.display = 'block'; 
+            canvas.style.cursor = 'grab';
+
+            setTimeout(() => {
+                try { renderEffect(); }
+                catch (err) { alert('图片过大或浏览器内存不足，渲染失败，请换一张较小的图片重试'); }
+            }, 50);
+        };
+        originalImage.onerror = () => {
+            URLObj.revokeObjectURL(url);
+            alert('图片解码失败，请确认格式是否正确（建议 PNG / JPG / WebP）');
+        };
+        originalImage.src = url;
+    });
+
+    DOM.clearImg.addEventListener('click', (e) => {
+        e.preventDefault(); 
+        e.stopPropagation();
+        
+        originalImage.removeAttribute('src');
+        DOM.imageUpload.value = ''; 
+        imageVersion++;
+        moveX = 0; moveY = 0;
+        hasLayer = false;
+        if (currentObjectURL) { (window.URL || window.webkitURL).revokeObjectURL(currentObjectURL); currentObjectURL = null; }
+        
+        DOM.previewBox.style.background = '#27272a'; // 修改：清除图片后也恢复为与随机色彩按钮一致的颜色
+        DOM.previewImg.style.display = 'none';
+        DOM.previewImg.removeAttribute('src');
+        DOM.previewText.style.display = 'block';
+        
+        DOM.fileName.style.display = 'none';
+        DOM.clearImg.style.display = 'none';
+        DOM.uploadText.style.display = 'inline';
+        canvas.style.cursor = 'default';
+        
+        composeCanvas();
+    });
+
+    DOM.btnJpg.addEventListener('click', () => downloadImage('jpg'));
+    DOM.btnPng.addEventListener('click', () => downloadImage('png'));
+
+    // =============================
+    // 通用工具
+    // =============================
+
+    function hexToRgb(hex) {
+        const match = hex.replace('#','').match(/.{1,2}/g);
+        return [parseInt(match[0],16), parseInt(match[1],16), parseInt(match[2],16)];
+    }
+
+    function getSubjectColor(imgElement) {
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        const size = 64; 
+        tempCanvas.width = size;
+        tempCanvas.height = size;
+        tempCtx.drawImage(imgElement, 0, 0, size, size);
+        
+        const data = tempCtx.getImageData(0, 0, size, size).data;
+        const colorCounts = {};
+        const edgeCounts = {};
+        let maxEdgeCount = 0;
+        let bgKey = '';
+
+        const quantize = (c) => Math.round(c / 16) * 16;
+        const getKey = (r, g, b) => `${quantize(r)},${quantize(g)},${quantize(b)}`;
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
+                    const i = (y * size + x) * 4;
+                    if (data[i + 3] < 128) continue; 
+                    const key = getKey(data[i], data[i+1], data[i+2]);
+                    edgeCounts[key] = (edgeCounts[key] || 0) + 1;
+                    if (edgeCounts[key] > maxEdgeCount) {
+                        maxEdgeCount = edgeCounts[key];
+                        bgKey = key;
+                    }
+                }
+            }
+        }
+
+        const colorDist = (k1, r, g, b) => {
+            if (!k1) return 999;
+            const p1 = k1.split(',').map(Number);
+            return Math.abs(p1[0]-r) + Math.abs(p1[1]-g) + Math.abs(p1[2]-b);
+        };
+
+        let maxSubjectCount = 0;
+        let subjectColor = '';
+        let fallbackMaxCount = 0;
+        let fallbackColor = '#000000';
+
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] < 128) continue;
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const key = getKey(r, g, b);
+
+            colorCounts[key] = (colorCounts[key] || 0) + 1;
+            if (colorCounts[key] > fallbackMaxCount) {
+                fallbackMaxCount = colorCounts[key];
+                fallbackColor = `rgb(${quantize(r)}, ${quantize(g)}, ${quantize(b)})`;
+            }
+
+            if (bgKey && colorDist(bgKey, r, g, b) < 60) continue;
+
+            if (colorCounts[key] > maxSubjectCount) {
+                maxSubjectCount = colorCounts[key];
+                subjectColor = `rgb(${quantize(r)}, ${quantize(g)}, ${quantize(b)})`;
+            }
+        }
+        
+        return subjectColor || fallbackColor || '#000000';
+    }
+
+    DOM.btnRandomColor.addEventListener('click', () => {
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                var hx = Math.round(255 * color).toString(16);
+                return hx.length < 2 ? '0' + hx : hx;
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+        const rnd = (min, max) => min + Math.random() * (max - min);
+        const FASHION_PAIRS = [
+            ['#ff3d81', '#2b4bff'], ['#ffd400', '#3a2bff'], ['#ff6a1a', '#6a2cff'], ['#19e0c4', '#ff2e63'],
+            ['#b6ff2b', '#ff2fa8'], ['#ff2e4d', '#ffe14d'], ['#2f7bff', '#ffb300'], ['#a95bff', '#ffe135'],
+            ['#00c2ff', '#ff4d2e'], ['#ff8fcf', '#1e3cff'], ['#ffe14d', '#ff2e8a'], ['#2de2a6', '#7a2bff']
+        ];
+        const vivid = h => hslToHex(h, Math.floor(rnd(88, 100)),
+            Math.floor((h > 40 && h < 75) ? rnd(54, 62) : (h >= 75 && h < 170) ? rnd(44, 54) : rnd(52, 62)));
+
+        let bgHex, coreHex;
+        if (Math.random() < 0.5) {
+            let pair = pick(FASHION_PAIRS).slice();
+            if (Math.random() < 0.5) pair.reverse();
+            [bgHex, coreHex] = pair;
+        } else {
+            const h1 = Math.floor(Math.random() * 360);
+            const h2 = (h1 + pick([120, 150, 180, 210, 240])) % 360;   
+            bgHex = vivid(h1);
+            coreHex = vivid(h2);
+        }
+
+        DOM.colorBg.value = bgHex;
+        DOM.colorCore.value = coreHex;
+
+        DOM.colorBgText.value = bgHex.toUpperCase();
+        DOM.colorCoreText.value = coreHex.toUpperCase();
+
+        if(originalImage.src) {
+            scheduleRender();
+        } else {
+            ctx.fillStyle = bgHex;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    });
+
+    // =============================
+    // 3D 发泡材质渲染引擎
+    // =============================
+
+    const P = new Uint8Array(512);
+    for(let i=0; i<256; i++) {
+        let h = Math.imul(i + 1, 0x9E3779B1); h ^= h >>> 15; h = Math.imul(h, 0x85EBCA77); h ^= h >>> 13;
+        P[i] = h & 255;
+        P[i+256] = P[i];
+    }
+    
+    function ensureNoise(cache, outW, outH) {
+        const nkey = outW;
+        if (cache.nkey === nkey && cache.N1 && cache.N1.length === outW * outH) return;
+        
+        const s = outW / 1200, size = outW * outH;
+        let N1 = cache.N1, N2 = cache.N2, N3 = cache.N3;
+        if (!N1 || N1.length !== size) {
+            N1 = new Float32Array(size);
+            N2 = new Float32Array(size);
+            N3 = new Float32Array(size);
+        }
+        fillNoise(N1, outW, outH, 0.15 / s);
+        fillNoise(N2, outW, outH, 0.45 / s); 
+        fillNoise(N3, outW, outH, 1.4 / s); 
+        
+        cache.nkey = nkey; cache.N1 = N1; cache.N2 = N2; cache.N3 = N3;
+    }
+
+    function fillNoise(out, W, H, f) {
+        for (let y = 0; y < H; y++) {
+            const fy0 = y * f, iy = fy0 | 0, fy = fy0 - iy;
+            const v = fy * fy * (3.0 - 2.0 * fy);
+            const iy0 = iy & 255, rowA = P[iy0], rowB = P[iy0 + 1];
+            const o = y * W;
+            for (let x = 0; x < W; x++) {
+                const fx0 = x * f, ix = fx0 | 0, fx = fx0 - ix;
+                const u = fx * fx * (3.0 - 2.0 * fx);
+                const i0 = ix & 255;
+                const a = P[i0 + rowA], b = P[i0 + 1 + rowA], c = P[i0 + rowB], d = P[i0 + 1 + rowB];
+                out[o + x] = (a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v) / 255.0;
+            }
+        }
+    }
+
+    function boxBlur(src, W, H, r, passes) {
+        const out = new Float32Array(src);
+        const tmp = new Float32Array(W * H);
+        const colSum = new Float64Array(W);
+        for (let pass = 0; pass < passes; pass++) {
+            for (let y = 0; y < H; y++) {
+                const o = y * W;
+                let sum = 0;
+                const lim = r < W ? r : W;
+                for (let i = 0; i < lim; i++) sum += out[o + i];
+                for (let x = 0; x < W; x++) {
+                    const add = x + r;
+                    if (add < W) sum += out[o + add];
+                    const sub = x - r - 1;
+                    if (sub >= 0) sum -= out[o + sub];
+                    const hi = add < W ? add : W - 1;
+                    const lo = x - r > 0 ? x - r : 0;
+                    tmp[o + x] = sum / (hi - lo + 1);
+                }
+            }
+            colSum.fill(0);
+            const limY = r < H ? r : H;
+            for (let i = 0; i < limY; i++) {
+                const o = i * W;
+                for (let x = 0; x < W; x++) colSum[x] += tmp[o + x];
+            }
+            for (let y = 0; y < H; y++) {
+                const addY = y + r;
+                if (addY < H) {
+                    const o = addY * W;
+                    for (let x = 0; x < W; x++) colSum[x] += tmp[o + x];
+                }
+                const subY = y - r - 1;
+                if (subY >= 0) {
+                    const o = subY * W;
+                    for (let x = 0; x < W; x++) colSum[x] -= tmp[o + x];
+                }
+                const hiY = addY < H ? addY : H - 1;
+                const loY = y - r > 0 ? y - r : 0;
+                const inv = 1.0 / (hiY - loY + 1);
+                const o = y * W;
+                for (let x = 0; x < W; x++) out[o + x] = colSum[x] * inv;
+            }
+        }
+        return out;
+    }
+
+    const MS_SEG = [
+        [], [[0,3]], [[1,0]], [[1,3]], [[2,1]], [[0,1],[2,3]], [[2,0]], [[2,3]],
+        [[3,2]], [[0,2]], [[1,2],[3,0]], [[1,2]], [[3,1]], [[0,1]], [[3,0]], []
+    ];
+    const MS_OUT = new Int8Array(32).fill(-1);
+    const MS_IN = new Int8Array(64).fill(-1);
+    for (let c = 0; c < 16; c++) {
+        MS_SEG[c].forEach((seg, si) => { MS_IN[c * 4 + seg[0]] = si; MS_OUT[c * 2 + si] = seg[1]; });
+    }
+
+    function traceContours(mask, W, H) {
+        const loops = [];
+        const PW = W + 2, CW = W + 1, CH = H + 1;
+        const pm = new Uint8Array(PW * (H + 2));
+        for (let y = 0; y < H; y++) {
+            const r = (y + 1) * PW + 1, m = y * W;
+            for (let x = 0; x < W; x++) pm[r + x] = mask[m + x];
+        }
+        const cases = new Uint8Array(CW * CH);
+        for (let cy = 0; cy < CH; cy++) {
+            for (let cx = 0; cx < CW; cx++) {
+                const b = cy * PW + cx;
+                cases[cy * CW + cx] = pm[b] | (pm[b + 1] << 1) | (pm[b + PW + 1] << 2) | (pm[b + PW] << 3);
+            }
+        }
+
+        const visited = new Uint8Array(CW * CH);
+        for (let cy0 = 0; cy0 < CH; cy0++) {
+            for (let cx0 = 0; cx0 < CW; cx0++) {
+                const ci0 = cy0 * CW + cx0;
+                const c0 = cases[ci0];
+                if (c0 === 0 || c0 === 15) continue;
+                const nseg = (c0 === 5 || c0 === 10) ? 2 : 1;
+                for (let s0 = 0; s0 < nseg; s0++) {
+                    if (visited[ci0] & (1 << s0)) continue;
+
+                    let cx = cx0, cy = cy0, si = s0;
+                    const xs = [], ys = [];
+                    while (true) {
+                        const ci = cy * CW + cx;
+                        visited[ci] |= (1 << si);
+                        const out = MS_OUT[cases[ci] * 2 + si];
+                        if (out === 0)      { xs.push(cx - 0.5); ys.push(cy - 1); }
+                        else if (out === 1) { xs.push(cx);       ys.push(cy - 0.5); }
+                        else if (out === 2) { xs.push(cx - 0.5); ys.push(cy); }
+                        else                { xs.push(cx - 1);   ys.push(cy - 0.5); }
+
+                        if (out === 0) cy -= 1; else if (out === 1) cx += 1; else if (out === 2) cy += 1; else cx -= 1;
+                        if (cx < 0 || cx >= CW || cy < 0 || cy >= CH) break;
+
+                        const nci = cy * CW + cx;
+                        const nsi = MS_IN[cases[nci] * 4 + ((out + 2) & 3)];
+                        if (nsi < 0) break;
+                        if (visited[nci] & (1 << nsi)) break;
+                        si = nsi;
+                    }
+                    if (xs.length >= 3) loops.push({ xs, ys });
+                }
+            }
+        }
+        return loops;
+    }
+
+    // 路径坐标平滑算法
+    function smoothLoop(xs, ys, iterations) {
+        const n = xs.length;
+        if (n < 4) return;
+        const tempX = new Float32Array(n);
+        const tempY = new Float32Array(n);
+        for (let iter = 0; iter < iterations; iter++) {
+            for (let i = 0; i < n; i++) {
+                const prev = i === 0 ? n - 1 : i - 1;
+                const next = i === n - 1 ? 0 : i + 1;
+                tempX[i] = (xs[prev] + xs[i] * 2 + xs[next]) / 4;
+                tempY[i] = (ys[prev] + ys[i] * 2 + ys[next]) / 4;
+            }
+            for (let i = 0; i < n; i++) {
+                xs[i] = tempX[i];
+                ys[i] = tempY[i];
+            }
+        }
+    }
+
+    function simplifyOpen(xs, ys, eps) {
+        const n = xs.length;
+        const keep = new Uint8Array(n);
+        keep[0] = 1; keep[n - 1] = 1;
+        const stack = [0, n - 1];
+        while (stack.length) {
+            const b = stack.pop(), a = stack.pop();
+            if (b - a < 2) continue;
+            const ax = xs[a], ay = ys[a], dx = xs[b] - ax, dy = ys[b] - ay;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            let maxD = -1, maxI = -1;
+            for (let i = a + 1; i < b; i++) {
+                const d = len > 0 ? Math.abs(dy * (xs[i] - ax) - dx * (ys[i] - ay)) / len
+                                  : Math.hypot(xs[i] - ax, ys[i] - ay);
+                if (d > maxD) { maxD = d; maxI = i; }
+            }
+            if (maxD > eps) { keep[maxI] = 1; stack.push(a, maxI, maxI, b); }
+        }
+        const idx = [];
+        for (let i = 0; i < n; i++) if (keep[i]) idx.push(i);
+        return idx;
+    }
+
+    function simplifyClosed(xs, ys, eps) {
+        const n = xs.length;
+        if (n < 4 || eps <= 0) return { xs, ys };
+        let k = 0, best = -1;
+        for (let i = 1; i < n; i++) {
+            const d = (xs[i] - xs[0]) * (xs[i] - xs[0]) + (ys[i] - ys[0]) * (ys[i] - ys[0]);
+            if (d > best) { best = d; k = i; }
+        }
+        const ax = xs.slice(0, k + 1), ay = ys.slice(0, k + 1);
+        const bx = xs.slice(k).concat([xs[0]]), by = ys.slice(k).concat([ys[0]]);
+        const ia = simplifyOpen(ax, ay, eps), ib = simplifyOpen(bx, by, eps);
+        const ox = [], oy = [];
+        for (const i of ia) { ox.push(ax[i]); oy.push(ay[i]); }
+        for (let j = 1; j < ib.length - 1; j++) { ox.push(bx[ib[j]]); oy.push(by[ib[j]]); }
+        return { xs: ox, ys: oy };
+    }
+
+    let smoothCanvas = null, smoothCtx = null;
+    function smoothSubjectMask(mask, W, H, eps, fullW, aaMaskOut) {
+        const size = W * H;
+        const loops = traceContours(mask, W, H);
+        const minArea = 40 * (fullW / 600) * (fullW / 600);
+
+        if (!smoothCanvas) smoothCanvas = document.createElement('canvas');
+        if (smoothCanvas.width !== W || smoothCanvas.height !== H) {
+            smoothCanvas.width = W; smoothCanvas.height = H;
+            smoothCtx = smoothCanvas.getContext('2d', { willReadFrequently: true });
+        } else {
+            smoothCtx.clearRect(0, 0, W, H);
+        }
+        const g = smoothCtx;
+        g.fillStyle = '#000';
+        g.beginPath();
+        for (const loop of loops) {
+            let area = 0;
+            const n0 = loop.xs.length;
+            for (let i = 0; i < n0; i++) {
+                const j = (i + 1) % n0;
+                area += loop.xs[i] * loop.ys[j] - loop.xs[j] * loop.ys[i];
+            }
+            if (Math.abs(area) / 2 < minArea) continue;
+
+            smoothLoop(loop.xs, loop.ys, 4);
+
+            const poly = simplifyClosed(loop.xs, loop.ys, eps);
+            const n = poly.xs.length;
+            if (n < 3) continue;
+            const px = poly.xs, py = poly.ys;
+            g.moveTo((px[n - 1] + px[0]) / 2, (py[n - 1] + py[0]) / 2);
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                g.quadraticCurveTo(px[i], py[i], (px[i] + px[j]) / 2, (py[i] + py[j]) / 2);
+            }
+            g.closePath();
+        }
+        g.fill('evenodd');
+
+        const d = g.getImageData(0, 0, W, H).data;
+        for (let i = 0; i < size; i++) {
+            const alpha = d[i * 4 + 3];
+            mask[i] = alpha > 0 ? 1 : 0;
+            if (aaMaskOut) aaMaskOut[i] = alpha; 
+        }
+    }
+
+    function renderFoamSync(outW, outH, cache, release) {
+        const s = outW / 1200;
+        const size = outW * outH;
+
+        const thresh = Math.min(254, parseInt(DOM.graphicThresh.value));
+        const edgeSmooth = parseInt(DOM.edgeSmooth.value);
+        const smoothCurve = parseInt(DOM.smoothCurve.value);
+        const volume = parseInt(DOM.volume.value) / 100.0 * 2.5;
+        const textureIntensity = parseInt(DOM.texture.value);
+        const butterAmt = parseInt(DOM.butter.value) / 100.0;
+        const lightAngle = parseInt(DOM.lightAngle.value) * Math.PI / 180;
+        const foam = hexToRgb(DOM.colorCore.value);
+
+        const lkey = outW + '|' + imageVersion;
+        if (cache.lkey !== lkey) {
+            const off = document.createElement('canvas');
+            off.width = outW; off.height = outH;
+            const offCtx = off.getContext('2d', { willReadFrequently: true });
+            offCtx.fillStyle = 'rgba(0,0,0,0)'; // 必须透明以便精准识别PNG通道
+            offCtx.clearRect(0, 0, outW, outH);
+            
+            const imgScale = Math.min(outW / originalImage.width, outH / originalImage.height);
+            const drawW = Math.max(1, Math.round(originalImage.width * imgScale));
+            const drawH = Math.max(1, Math.round(originalImage.height * imgScale));
+            const dx = Math.round((outW - drawW) / 2);
+            const dy = Math.round((outH - drawH) / 2);
+            offCtx.drawImage(originalImage, dx, dy, drawW, drawH);
+            const imgData = offCtx.getImageData(0, 0, outW, outH).data;
+
+            // 智能识别任意纯色背景（包含PNG的透明背或JPG的黑白彩底）
+            let transCount = 0;
+            let colorMap = {};
+            let maxCount = 0;
+            let bgR = 255, bgG = 255, bgB = 255;
+
+            const samplePixel = (x, y) => {
+                if (x < 0 || x >= outW || y < 0 || y >= outH) return;
+                const idx = (y * outW + x) * 4;
+                if (imgData[idx+3] < 128) {
+                    transCount++;
+                } else {
+                    const r = imgData[idx], g = imgData[idx+1], b = imgData[idx+2];
+                    const key = (r >> 4) + ',' + (g >> 4) + ',' + (b >> 4);
+                    colorMap[key] = (colorMap[key] || 0) + 1;
+                    if (colorMap[key] > maxCount) {
+                        maxCount = colorMap[key];
+                        bgR = r; bgG = g; bgB = b;
+                    }
+                }
+            };
+
+            // 抓取图片真实的边框轮廓颜色，不受居中缩放引起的画布边缘影响
+            for (let x = dx; x < dx + drawW; x++) { samplePixel(x, dy); samplePixel(x, dy + drawH - 1); }
+            for (let y = dy + 1; y < dy + drawH - 1; y++) { samplePixel(dx, y); samplePixel(dx + drawW - 1, y); }
+
+            const perimeterSize = drawW * 2 + drawH * 2 - 4;
+            const isTransparentBg = perimeterSize > 0 && (transCount / perimeterSize) > 0.15; // 透明边界超15%则识别为去背PNG
+
+            cache.bgDetect = { r: bgR, g: bgG, b: bgB, isTransparent: isTransparentBg };
+            cache.imgData = imgData;
+            cache.lkey = lkey;
+        }
+
+        const k1 = outW + '|' + thresh + '|' + imageVersion;
+        if (cache.k1 !== k1) {
+            const idata = cache.imgData;
+            const bg = cache.bgDetect;
+            const bin = (cache.bin && cache.bin.length === size) ? cache.bin : new Uint8Array(size);
+            
+            // 图形阀值滑块 -> 转化为自动背景剥离的“色距容差” (Threshold 220 = Tolerance 35)
+            const tolerance = Math.max(1, 255 - thresh); 
+
+            let minX = outW, maxX = -1, minY = outH, maxY = -1;
+            for (let y = 0; y < outH; y++) {
+                const o = y * outW;
+                let rowMin = -1, rowMax = -1;
+                for (let x = 0; x < outW; x++) {
+                    const idx = (o + x) * 4;
+                    const a = idata[idx+3];
+                    let isSubject = false;
+
+                    if (a < 10) {
+                        isSubject = false;  // 针对透明外围直接舍弃
+                    } else if (bg.isTransparent) {
+                        isSubject = (a > (255 - tolerance)); // PNG利用滑块微调通道提取边界
+                    } else {
+                        // JPG任意纯色（无论黑底白图、白底黑图、红底蓝图）全系剥离算法
+                        const r = idata[idx], g = idata[idx+1], b = idata[idx+2];
+                        const dist = Math.max(Math.abs(r - bg.r), Math.abs(g - bg.g), Math.abs(b - bg.b));
+                        isSubject = (dist > tolerance);
+                    }
+
+                    if (!isSubject) {
+                        bin[o + x] = 0;
+                    } else {
+                        bin[o + x] = 1;
+                        if (rowMin < 0) rowMin = x;
+                        rowMax = x;
+                    }
+                }
+                if (rowMin >= 0) {
+                    if (rowMin < minX) minX = rowMin;
+                    if (rowMax > maxX) maxX = rowMax;
+                    if (y < minY) minY = y;
+                    maxY = y;
+                }
+            }
+            cache.bin = bin; cache.k1 = k1;
+            cache.bbox = maxX < 0 ? null : { minX, maxX, minY, maxY };
+        }
+        
+        const rEdgeMax = Math.round(100 * 0.24 * s), rBlur = Math.floor(outW * 0.012);
+        const M = 2 * rEdgeMax + 2 * rBlur + 8;
+        const bb = cache.bbox;
+        let x0 = 0, y0 = 0, x1 = -1, y1 = -1;
+        if (bb) {
+            x0 = Math.max(0, bb.minX - M); x1 = Math.min(outW - 1, bb.maxX + M);
+            y0 = Math.max(0, bb.minY - M); y1 = Math.min(outH - 1, bb.maxY + M);
+        }
+        const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+
+        const k2 = k1 + '|' + edgeSmooth;
+        if (cache.k2 !== k2) {
+            let m1 = null;
+            if (bb) {
+                m1 = new Uint8Array(cw * ch);
+                for (let y = 0; y < ch; y++) {
+                    const src = (y0 + y) * outW + x0;
+                    m1.set(cache.bin.subarray(src, src + cw), y * cw);
+                }
+                if (edgeSmooth > 0) {
+                    const sm = boxBlur(new Float32Array(m1), cw, ch, Math.max(1, Math.round(edgeSmooth * 0.24 * s)), 2);
+                    for (let i = 0; i < m1.length; i++) m1[i] = sm[i] > 0.5 ? 1 : 0;
+                }
+            }
+            cache.m1 = m1; cache.k2 = k2;
+        }
+
+        const k3 = k2 + '|' + smoothCurve;
+        if (cache.k3 !== k3) {
+            let m2 = null;
+            let aaMask = null;
+            if (bb) {
+                m2 = new Uint8Array(cache.m1);
+                aaMask = new Uint8Array(cw * ch);
+                smoothSubjectMask(m2, cw, ch, smoothCurve * outW / 600, outW, aaMask);
+            }
+            cache.m2 = m2; 
+            cache.aaMask = aaMask;
+            cache.k3 = k3;
+        }
+
+        if (cache.dkey !== k3) {
+            const inside = (cache.inside && cache.inside.length === size) ? cache.inside : new Uint8Array(size);
+            const smoothDist = (cache.smoothDist && cache.smoothDist.length === size) ? cache.smoothDist : new Float32Array(size);
+            const fullAa = (cache.fullAa && cache.fullAa.length === size) ? cache.fullAa : new Uint8Array(size);
+            inside.fill(0); smoothDist.fill(0); fullAa.fill(0);
+            const edgeDist = (cache.edgeDist && cache.edgeDist.length === size) ? cache.edgeDist : new Float32Array(size);
+            edgeDist.fill(0);
+            let maxD = 0;
+
+            if (bb) {
+                const m2 = cache.m2;
+                const dist = new Float32Array(cw * ch);
+                for (let i = 0; i < dist.length; i++) dist[i] = m2[i] ? 10000 : 0;
+
+                if (x0 === 0) for (let y = 0; y < ch; y++) if (dist[y * cw] > 0) dist[y * cw] = 1;
+                if (x1 === outW - 1) for (let y = 0; y < ch; y++) if (dist[y * cw + cw - 1] > 0) dist[y * cw + cw - 1] = 1;
+                if (y0 === 0) for (let x = 0; x < cw; x++) if (dist[x] > 0) dist[x] = 1;
+                if (y1 === outH - 1) for (let x = 0; x < cw; x++) if (dist[(ch - 1) * cw + x] > 0) dist[(ch - 1) * cw + x] = 1;
+
+                for (let y = 1; y < ch - 1; y++) {
+                    let row = y * cw;
+                    for (let x = 1; x < cw - 1; x++) {
+                        let i = row + x;
+                        if (dist[i] > 0) dist[i] = Math.min(dist[i], dist[i - 1] + 1, dist[i - cw] + 1, dist[i - cw - 1] + 1.414, dist[i - cw + 1] + 1.414);
+                    }
+                }
+                for (let y = ch - 2; y >= 1; y--) {
+                    let row = y * cw;
+                    for (let x = cw - 2; x >= 1; x--) {
+                        let i = row + x;
+                        if (dist[i] > 0) dist[i] = Math.min(dist[i], dist[i + 1] + 1, dist[i + cw] + 1, dist[i + cw + 1] + 1.414, dist[i + cw - 1] + 1.414);
+                    }
+                }
+
+                const insideCrop = new Uint8Array(cw * ch);
+                for (let i = 0; i < dist.length; i++) {
+                    if (dist[i] > 0) insideCrop[i] = 1;
+                    if (dist[i] > maxD && dist[i] < 10000) maxD = dist[i];
+                }
+
+                const edgeBlur = boxBlur(dist, cw, ch, Math.max(1, Math.round(2 * s)), 1);
+                const blurred = boxBlur(dist, cw, ch, rBlur, 2);
+                for (let y = 0; y < ch; y++) {
+                    const dst = (y0 + y) * outW + x0;
+                    smoothDist.set(blurred.subarray(y * cw, (y + 1) * cw), dst);
+                    edgeDist.set(edgeBlur.subarray(y * cw, (y + 1) * cw), dst);
+                    inside.set(insideCrop.subarray(y * cw, (y + 1) * cw), dst);
+                    fullAa.set(cache.aaMask.subarray(y * cw, (y + 1) * cw), dst); 
+                }
+            }
+            if (maxD < 1) maxD = 1;
+
+            cache.dkey = k3;
+            cache.smoothDist = smoothDist;
+            cache.edgeDist = edgeDist;
+            cache.inside = inside;
+            cache.fullAa = fullAa; 
+            cache.maxD = maxD;
+        }
+        const smoothDist = cache.smoothDist, edgeDist = cache.edgeDist, inside = cache.inside, maxD = cache.maxD;
+        if (release) { cache.imgData = null; cache.bgDetect = null; cache.bin = null; cache.m1 = null; cache.m2 = null; }
+
+        ensureNoise(cache, outW, outH);
+        const N1 = cache.N1, N2 = cache.N2, N3 = cache.N3;
+
+        const bevelR = 40 * s; 
+        const hkey = k3 + '|' + volume;
+        if (cache.hkey !== hkey) {
+            const hm = (cache.hm && cache.hm.length === size) ? cache.hm : new Float32Array(size);
+            hm.fill(0);
+            if (bb) {
+                for (let y = y0; y <= y1; y++) {
+                    const row = y * outW;
+                    for (let x = x0; x <= x1; x++) {
+                        const i = row + x;
+                        if (smoothDist[i] > 0.01) {
+                            let normalizedD = smoothDist[i] / maxD;
+                            if (normalizedD > 1.0) normalizedD = 1.0;
+                            const nx2 = 1.0 - normalizedD;
+                            hm[i] = Math.sqrt(1.0 - nx2 * nx2) * volume * 2.0;
+                        }
+                        if (inside[i]) {
+                            let t = edgeDist[i] / bevelR;
+                            if (t > 1) t = 1;
+                            const u = 1 - t;
+                            hm[i] += Math.sqrt(1 - u * u) * volume * 1.0;
+                        }
+                    }
+                }
+            }
+            cache.hm = hm; cache.hkey = hkey;
+        }
+        const heightMap = cache.hm;
+
+        let pixels = cache.pixels;
+        if (!pixels || pixels.length !== size * 4) { pixels = new Uint8ClampedArray(size * 4); cache.pixels = pixels; }
+        else pixels.fill(0);
+
+        const lh = Math.sqrt(0.7 * 0.7 + 0.5 * 0.5);
+        let lx = lh * Math.cos(lightAngle), ly = lh * Math.sin(lightAngle), lz = 0.5; 
+        const llen = Math.sqrt(lx*lx + ly*ly + lz*lz);
+        lx/=llen; ly/=llen; lz/=llen;
+
+        let hx = lx, hy = ly, hz = lz + 1.0;
+        const hlen = Math.sqrt(hx*hx + hy*hy + hz*hz);
+        hx/=hlen; hy/=hlen; hz/=hlen;
+
+        const CL_N = 1024;
+        const colorLut = new Float32Array(CL_N * 3);
+        for (let i = 0; i < CL_N; i++) {
+            const t = i / (CL_N - 1);
+            for (let c = 0; c < 3; c++) {
+                const body = foam[c], dark = body * 0.12, light = body + (255 - body) * 0.95; 
+                colorLut[i * 3 + c] = t < 0.45 ? dark + (body - dark) * (t / 0.45)
+                                               : body + (light - body) * ((t - 0.45) / 0.55);
+            }
+        }
+        
+        const GL_N = 2048;
+        const gammaLut = new Float32Array(GL_N + 1);
+        for (let i = 0; i <= GL_N; i++) gammaLut[i] = Math.pow(i / GL_N, 0.4);
+
+        const shadowStrength = 1.5 + butterAmt * 3.5; 
+        const specAmt = (0.2 + butterAmt * 0.5) * 255;
+        const normalGain = 200 * s;
+        const poreGain = textureIntensity * 0.45 * s;
+
+        const LUT_N = 2048;
+        const powLut = new Float32Array(LUT_N + 1);
+        for (let i = 0; i <= LUT_N; i++) powLut[i] = Math.pow(i / LUT_N, shadowStrength);
+
+        if (bb) {
+            const ya = Math.max(1, y0), yb = Math.min(outH - 2, y1);
+            const xa = Math.max(1, x0), xb = Math.min(outW - 2, x1);
+            const fullAa = cache.fullAa; 
+            for (let y = ya; y <= yb; y++) {
+                const row = y * outW;
+                for (let x = xa; x <= xb; x++) {
+                    const idx = row + x;
+                    const aaAlpha = fullAa[idx];
+                    
+                    if (aaAlpha === 0) continue; 
+
+                    let hh1 = Math.imul(idx ^ 0x9E3779B9, 0x85EBCA6B);
+                    hh1 ^= hh1 >>> 13; hh1 = Math.imul(hh1, 0xC2B2AE35); hh1 ^= hh1 >>> 16;
+                    const rn1 = ((hh1 >>> 0) / 4294967296 - 0.5);
+
+                    let hh2 = Math.imul(idx ^ 0x738A941F, 0x85EBCA6B);
+                    hh2 ^= hh2 >>> 13; hh2 = Math.imul(hh2, 0xC2B2AE35); hh2 ^= hh2 >>> 16;
+                    const rn2 = ((hh2 >>> 0) / 4294967296 - 0.5);
+
+                    const n1 = N1[idx], n2 = N2[idx], n3 = N3[idx];
+
+                    let nx = (heightMap[idx - 1] - heightMap[idx + 1]) * normalGain
+                           + ((N1[idx + 1] - n1) + (N2[idx + 1] - n2) * 0.8 + (N3[idx + 1] - n3) * 0.7 + rn1 * 0.06) * poreGain * 1.15;
+                    let ny = (heightMap[idx - outW] - heightMap[idx + outW]) * normalGain
+                           + ((N1[idx + outW] - n1) + (N2[idx + outW] - n2) * 0.8 + (N3[idx + outW] - n3) * 0.7 + rn2 * 0.06) * poreGain * 1.15;
+
+                    const inv = 1.0 / Math.sqrt(nx*nx + ny*ny + 1.0);
+                    nx *= inv; ny *= inv;
+                    const nz = inv;
+
+                    let diffuse = (nx*lx + ny*ly + nz*lz + 0.4) / 1.4;   
+                    if (diffuse < 0) diffuse = 0; else if (diffuse > 1) diffuse = 1;
+                    let shading = powLut[(diffuse * LUT_N + 0.5) | 0];
+
+                    let rawCavity = 1.05 - n1 * 0.5 - n2 * 0.35 - n3 * 0.25;
+                    const cavity = Math.max(0, rawCavity * rawCavity * 1.8); 
+                    shading *= cavity; 
+                    if (shading > 1) shading = 1;
+                    const ci = ((gammaLut[(shading * GL_N + 0.5) | 0] * (CL_N - 1) + 0.5) | 0) * 3;
+
+                    let sa = nx*hx + ny*hy + nz*hz;
+                    if (sa < 0) sa = 0; else if (sa > 1) sa = 1;
+                    
+                    const sa2 = sa * sa, sa4 = sa2 * sa2, sa8 = sa4 * sa4, sa16 = sa8 * sa8, sa32 = sa16 * sa16;
+                    const specular = sa32 * sa8 * specAmt * 1.8 * cavity; 
+
+                    const grain = rn1 * 12; 
+
+                    const pIdx = idx * 4;
+                    pixels[pIdx]   = colorLut[ci]     + specular + grain;
+                    pixels[pIdx+1] = colorLut[ci + 1] + specular + grain;
+                    pixels[pIdx+2] = colorLut[ci + 2] + specular + grain;
+                    pixels[pIdx+3] = aaAlpha; 
+                }
+            }
+        }
+
+        return { pixels, W: outW, H: outH };
+    }
+
+    function makeImageData(pixels, w, h) {
+        try { return new ImageData(pixels, w, h); }
+        catch (e) { const id = ctx.createImageData(w, h); id.data.set(pixels); return id; }
+    }
+
+    function resultToLayer(res) {
+        const layer = document.createElement('canvas');
+        layer.width = res.W; layer.height = res.H;
+        layer.getContext('2d').putImageData(makeImageData(res.pixels, res.W, res.H), 0, 0);
+        return layer;
+    }
+
+    const previewLayer = document.createElement('canvas');
+    const previewLayerCtx = previewLayer.getContext('2d');
+    let hasLayer = false;
+
+    function composeCanvas() {
+        ctx.fillStyle = DOM.colorBg.value;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (hasLayer && originalImage.src && previewLayer.width > 0) {
+            // 通过无差别 1:1 的直接覆盖绘制，解除了一切插值、拉伸模糊
+            const dx = moveX * canvas.width;
+            const dy = moveY * canvas.width;
+            ctx.drawImage(previewLayer, Math.round(dx), Math.round(dy));
+        }
+    }
+
+    function renderEffect() {
+        if (!originalImage.src) return;
+
+        // 全面取消缩放引擎和分辨率上限天花板封印，真实物理 1:1 绘制保证纯净的清晰度
+        let targetW = canvas.width;
+        let targetH = canvas.height;
+
+        const res = renderFoamSync(targetW, targetH, cacheMain);
+        if (previewLayer.width !== res.W || previewLayer.height !== res.H) {
+            previewLayer.width = res.W; previewLayer.height = res.H;
+        }
+        previewLayerCtx.putImageData(makeImageData(res.pixels, res.W, res.H), 0, 0);
+        hasLayer = true;
+        composeCanvas();
+    }
+
+    // ---------- 画布内移动图形：拖动即移动，双击复位 ----------
+    let composePending = false;
+    function scheduleCompose() {
+        if (composePending) return;
+        composePending = true;
+        requestAnimationFrame(() => { composePending = false; composeCanvas(); });
+    }
+
+    let dragging = false, dragLastX = 0, dragLastY = 0;
+    function dragStart(x, y) {
+        if (!originalImage.src) return false;
+        dragging = true; dragLastX = x; dragLastY = y;
+        canvas.style.cursor = 'grabbing';
+        return true;
+    }
+    function dragMove(x, y) {
+        if (!dragging) return;
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width) return;
+        const k = 1 / rect.width;   
+        moveX += (x - dragLastX) * k;
+        moveY += (y - dragLastY) * k;
+        
+        // 限制拖动范围
+        const maxMove = 1;
+        moveX = Math.max(-maxMove, Math.min(maxMove, moveX));
+        moveY = Math.max(-maxMove * 1.34, Math.min(maxMove * 1.34, moveY));
+        
+        dragLastX = x; dragLastY = y;
+        scheduleCompose();
+    }
+    function dragEnd() {
+        if (!dragging) return;
+        dragging = false;
+        canvas.style.cursor = originalImage.src ? 'grab' : 'default';
+    }
+
+    if (window.PointerEvent) {
+        canvas.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            if (dragStart(e.clientX, e.clientY)) {
+                try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+                e.preventDefault();
+            }
+        });
+        canvas.addEventListener('pointermove', (e) => { if (dragging) { dragMove(e.clientX, e.clientY); e.preventDefault(); } });
+        canvas.addEventListener('pointerup', dragEnd);
+        canvas.addEventListener('pointercancel', dragEnd);
+    } else {
+        canvas.addEventListener('mousedown', (e) => { if (e.button === 0 && dragStart(e.clientX, e.clientY)) e.preventDefault(); });
+        window.addEventListener('mousemove', (e) => dragMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', dragEnd);
+        canvas.addEventListener('touchstart', (e) => { if (e.touches.length === 1 && dragStart(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault(); }, false);
+        canvas.addEventListener('touchmove', (e) => { if (dragging && e.touches.length === 1) { dragMove(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, false);
+        canvas.addEventListener('touchend', dragEnd, false);
+        canvas.addEventListener('touchcancel', dragEnd, false);
+    }
+    canvas.addEventListener('dblclick', () => {
+        if (!originalImage.src) return;
+        moveX = 0; moveY = 0; 
+        scheduleCompose();
+    });
+
+    // ---------- 画布分辨率自适应 ----------
+    function fitCanvas() {
+        const area = DOM.canvasArea;
+        const cs = window.getComputedStyle(area);
+        const availW = area.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+        const availH = area.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+        if (!(availW > 50 && availH > 50)) return false;
+
+        const dpr = window.devicePixelRatio || 1;
+        const unit = Math.min(availW / 3, availH / 4);                 
+        let W = Math.floor(unit * 3 * dpr / 3) * 3;                    
+        W = Math.max(300, Math.min(MAX_CANVAS_W, W));
+        const H = W / 3 * 4;
+
+        let cssW = W / dpr;
+        if (cssW > unit * 3 + 0.5 || W === MAX_CANVAS_W || W === 300) cssW = unit * 3;
+        canvas.style.width = cssW + 'px';
+        canvas.style.height = (cssW / 3 * 4) + 'px';
+
+        if (W === canvas.width && H === canvas.height) return false;
+        canvas.width = W; canvas.height = H;   
+        return true;
+    }
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (fitCanvas()) {
+                if (originalImage.src) renderEffect(); else composeCanvas();
+                scheduleIdle(prewarmNoise);
+            }
+        }, 80);
+    });
+
+    function prewarmNoise() { try { ensureNoise(cacheMain, canvas.width, canvas.height); } catch (e) {} }
+    function scheduleIdle(fn) {
+        if (window.requestIdleCallback) window.requestIdleCallback(fn, { timeout: 500 });
+        else setTimeout(fn, 60);
+    }
+
+    // ---------- 导出 ----------
+    function canvasToBlob(cv, type, quality, cb) {
+        if (cv.toBlob) { cv.toBlob(cb, type, quality); return; }
+        const data = atob(cv.toDataURL(type, quality).split(',')[1]);
+        const arr = new Uint8Array(data.length);
+        for (let i = 0; i < data.length; i++) arr[i] = data.charCodeAt(i);
+        cb(new Blob([arr], { type: type }));
+    }
+
+    function saveBlob(blob, name) {
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) { window.navigator.msSaveOrOpenBlob(blob, name); return; }
+        const URLObj = window.URL || window.webkitURL;
+        const url = URLObj.createObjectURL(blob);
+        const a = document.createElement('a');
+        if (typeof a.download === 'undefined') { window.open(url, '_blank'); return; }
+        a.href = url; a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URLObj.revokeObjectURL(url), 4000);
+    }
+
+    function downloadImage(format) {
+        if(!originalImage.src) return alert('请先上传图片');
+        const btn = DOM[format === 'jpg' ? 'btnJpg' : 'btnPng'];
+        btn.disabled = true;
+
+        setTimeout(() => {
+            try {
+                // 导出永远保持 2400x3200 像素，不再受缩放影响
+                const EW = EXPORT_W, EH = EXPORT_H;
+                const renderW = EW;
+                const renderH = EH;
+                
+                const res = renderFoamSync(renderW, renderH, {}, true);
+                const layer = resultToLayer(res);
+
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = EW; outCanvas.height = EH;
+                const oc = outCanvas.getContext('2d');
+                if (format === 'jpg') {      
+                    oc.fillStyle = DOM.colorBg.value;
+                    oc.fillRect(0, 0, EW, EH);
+                }
+                
+                // 点对点坐标绘制，导出图像零模糊
+                const dx = moveX * EW;
+                const dy = moveY * EW;
+                oc.drawImage(layer, Math.round(dx), Math.round(dy));
+                layer.width = 1; layer.height = 1;   
+
+                const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+                canvasToBlob(outCanvas, mimeType, format === 'jpg' ? 1.0 : undefined, (blob) => {
+                    saveBlob(blob, 'foam_' + Date.now() + '.' + format);
+                    outCanvas.width = 1; outCanvas.height = 1;
+                    btn.disabled = false;
+                });
+            } catch (err) {
+                alert("导出异常/Export Error");
+                btn.disabled = false;
+            }
+        }, 30);
+    }
+
+    (function init() {
+        if (!canvas.getContext || typeof Uint8ClampedArray === 'undefined' || !(window.URL || window.webkitURL)) {
+            alert('当前浏览器版本过低，请升级到较新的 Safari 或 Chrome 后使用');
+            return;
+        }
+        fitCanvas();
+        composeCanvas();
+        scheduleIdle(prewarmNoise);
+    })();
+</script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
